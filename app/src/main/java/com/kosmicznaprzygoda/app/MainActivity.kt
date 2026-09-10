@@ -45,6 +45,22 @@ class MainActivity : Activity() {
         val color: Int,
         val drawableRes: Int
     )
+    data class MissionDef(
+    val name: String,
+    val reward: Int,
+    val requirement: String,
+    val isDone: () -> Boolean
+)
+
+data class Puff(
+    var x: Float,
+    var y: Float,
+    var vx: Float,
+    var vy: Float,
+    var age: Float,
+    var life: Float,
+    var scale: Float
+)
 
     inner class SpaceGameView : View(this) {
 
