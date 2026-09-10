@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <item name="rocket_lvl1" type="drawable">@drawable/rocket_pionier</item>
+    <item name="rocket_lvl2" type="drawable">@drawable/rocket_maly_badacz</item>
+    <item name="rocket_lvl3" type="drawable">@drawable/rocket_explorer_1</item>
+    <item name="rocket_lvl4" type="drawable">@drawable/rocket_orbiter</item>
+    <item name="rocket_lvl5" type="drawable">@drawable/rocket_hermes</item>
+    <item name="rocket_lvl6" type="drawable">@drawable/rocket_galaktyk</item>
+
+    <item name="planeta_ksiezyc" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_mars" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_wenus" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_jowisz" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_saturn" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_uran" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_neptun" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_aurelia" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_ignara" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_cryonis" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_nectaris" type="drawable">@drawable/planet_placeholder</item>
+    <item name="planeta_obsidia" type="drawable">@drawable/planet_placeholder</item>
+
+    <item name="dome_colony_base" type="drawable">@drawable/planet_placeholder</item>
+    <item name="mars_colony_base" type="drawable">@drawable/planet_placeholder</item>
+    <item name="launch_pad_base" type="drawable">@drawable/planet_placeholder</item>
+    <item name="ring_station_base" type="drawable">@drawable/planet_placeholder</item>
+    <item name="asteroida" type="drawable">@drawable/planet_placeholder</item>
+    <item name="kolonizatorzy" type="drawable">@drawable/planet_placeholder</item>
+    <item name="wieza_startowa" type="drawable">@drawable/planet_placeholder</item>
+    <item name="smoke_puff" type="drawable">@drawable/planet_placeholder</item>
+
+</resources>
