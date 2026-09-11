@@ -69,8 +69,10 @@ data class Puff(
         private var credits = 500
         private var rocketLevel = 1
         private var selectedPlanet = 0
+        private var planetPage = 0
 
         private var fuel = 100f
+        private var fuelTankBonus = 0
         private var altitude = 0f
         private var speed = 0f
         private var verticalSpeed = 0f
@@ -119,7 +121,7 @@ data class Puff(
         private fun isPlanetUnlocked(index: Int): Boolean {
             return when (index) {
                 0 -> true
-                1 -> moonBaseLevel() >= 4
+                1 -> landedOn.contains(0) || totalLaunches >= 1
                 2 -> landedOn.contains(1)
                 3 -> landedOn.contains(2)
                 4 -> landedOn.contains(3)
@@ -130,7 +132,34 @@ data class Puff(
                 9 -> landedOn.contains(8)
                 10 -> landedOn.contains(9)
                 11 -> landedOn.contains(10)
+                12 -> landedOn.contains(11)
+                13 -> landedOn.contains(12)
+                14 -> landedOn.contains(13)
+                15 -> landedOn.contains(14)
+                16 -> landedOn.contains(15)
+                17 -> landedOn.contains(16)
+                18 -> landedOn.contains(17)
+                19 -> landedOn.contains(18)
                 else -> false
+            }
+        }
+
+        private fun fuelCapacity(): Float = 100f + fuelTankBonus * 25f + fuelTech * 5f
+
+        private fun recommendedRange(): Float {
+            return 900f + (rocketLevel - 1) * 950f + navigationTech * 450f + fuelTankBonus * 450f
+        }
+
+        private fun isRiskyDestination(): Boolean =
+            planets[selectedPlanet].targetAltitude > recommendedRange()
+
+        private fun buyFuelPack() {
+            val cost = 350 + fuelTankBonus * 250
+            if (fuelTankBonus >= 4) return
+            if (credits >= cost) {
+                credits -= cost
+                fuelTankBonus += 1
+                saveState()
             }
         }
 
@@ -158,90 +187,26 @@ data class Puff(
         private var last = System.currentTimeMillis()
 
         private val planets = listOf(
-            Planet(
-                "Księżyc",
-                50f,
-                5000,
-                Color.rgb(200, 200, 200),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Mars",
-                400f,
-                12000,
-                Color.rgb(210, 90, 60),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Wenus",
-                600f,
-                20000,
-                Color.rgb(230, 190, 120),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Jowisz",
-                1200f,
-                40000,
-                Color.rgb(200, 150, 90),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Saturn",
-                2000f,
-                80000,
-                Color.rgb(180, 190, 210),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Uran",
-                3200f,
-                150000,
-                Color.rgb(140, 220, 235),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Neptun",
-                4500f,
-                250000,
-                Color.rgb(70, 90, 220),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Aurelia",
-                6000f,
-                320000,
-                Color.rgb(40, 120, 90),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Ignara",
-                7800f,
-                420000,
-                Color.rgb(120, 45, 25),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Cryonis",
-                9800f,
-                540000,
-                Color.rgb(170, 220, 235),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Nectaris",
-                12000f,
-                700000,
-                Color.rgb(150, 90, 200),
-                android.R.drawable.ic_menu_gallery
-            ),
-            Planet(
-                "Obsidia",
-                15000f,
-                900000,
-                Color.rgb(35, 30, 40),
-                android.R.drawable.ic_menu_gallery
-            )
+            Planet("Księżyc", 50f, 5000, Color.rgb(200,200,200), android.R.drawable.ic_menu_gallery),
+            Planet("Mars", 400f, 12000, Color.rgb(210,90,60), android.R.drawable.ic_menu_gallery),
+            Planet("Wenus", 600f, 20000, Color.rgb(230,190,120), android.R.drawable.ic_menu_gallery),
+            Planet("Jowisz", 1200f, 40000, Color.rgb(200,150,90), android.R.drawable.ic_menu_gallery),
+            Planet("Saturn", 2000f, 80000, Color.rgb(180,190,210), android.R.drawable.ic_menu_gallery),
+            Planet("Uran", 3200f, 150000, Color.rgb(140,220,235), android.R.drawable.ic_menu_gallery),
+            Planet("Neptun", 4500f, 250000, Color.rgb(70,90,220), android.R.drawable.ic_menu_gallery),
+            Planet("Aurelia", 6000f, 320000, Color.rgb(40,120,90), android.R.drawable.ic_menu_gallery),
+            Planet("Ignara", 7800f, 420000, Color.rgb(120,45,25), android.R.drawable.ic_menu_gallery),
+            Planet("Cryonis", 9800f, 540000, Color.rgb(170,220,235), android.R.drawable.ic_menu_gallery),
+            Planet("Nectaris", 12000f, 700000, Color.rgb(150,90,200), android.R.drawable.ic_menu_gallery),
+            Planet("Obsidia", 15000f, 900000, Color.rgb(35,30,40), android.R.drawable.ic_menu_gallery),
+            Planet("Merkury", 240f, 10000, Color.rgb(150,145,135), android.R.drawable.ic_menu_gallery),
+            Planet("Ziemia", 850f, 30000, Color.rgb(60,130,220), android.R.drawable.ic_menu_gallery),
+            Planet("Verdantis", 18000f, 1100000, Color.rgb(50,170,90), android.R.drawable.ic_menu_gallery),
+            Planet("Pyron", 22000f, 1350000, Color.rgb(210,70,35), android.R.drawable.ic_menu_gallery),
+            Planet("Crystalon", 27000f, 1700000, Color.rgb(150,220,255), android.R.drawable.ic_menu_gallery),
+            Planet("Nyx", 33000f, 2200000, Color.rgb(55,35,95), android.R.drawable.ic_menu_gallery),
+            Planet("Ragnar", 38000f, 2600000, Color.rgb(100,105,115), android.R.drawable.ic_menu_gallery),
+            Planet("Helios", 46000f, 3200000, Color.rgb(120,95,75), android.R.drawable.ic_menu_gallery)
         )
 
 
@@ -420,7 +385,15 @@ data class Puff(
                     8 -> "planet_ignara"
                     9 -> "planet_cryonis"
                     10 -> "planet_nectaris"
-                    else -> "planet_obsidia"
+                    11 -> "planet_obsidia"
+                    12 -> "planet_mercury"
+                    13 -> "planet_earth"
+                    14 -> "planet_verdantis"
+                    15 -> "planet_pyron"
+                    16 -> "planet_crystalon"
+                    17 -> "planet_nyx"
+                    18 -> "asteroid_ragnar"
+                    else -> "asteroid_helios"
                 },
                 fallback
             )
@@ -456,6 +429,7 @@ data class Puff(
                 .putInt("navigationTech", navigationTech)
                 .putInt("landingTech", landingTech)
                 .putInt("cargoTech", cargoTech)
+                .putInt("fuelTankBonus", fuelTankBonus)
                 .putStringSet(
                     "landedOn",
                     landedOn.map { it.toString() }.toSet()
@@ -498,6 +472,7 @@ data class Puff(
             navigationTech = prefs.getInt("navigationTech", 0).coerceIn(0, 5)
             landingTech = prefs.getInt("landingTech", 0).coerceIn(0, 5)
             cargoTech = prefs.getInt("cargoTech", 0).coerceIn(0, 5)
+            fuelTankBonus = prefs.getInt("fuelTankBonus", 0).coerceIn(0, 4)
 
             prefs.getStringSet(
                 "landedOn",
@@ -599,7 +574,7 @@ data class Puff(
             }
             selectedCrew = selectedCrew.coerceIn(0, crewCapacity)
 
-            fuel = 100f
+            fuel = fuelCapacity()
             altitude = 0f
             speed = 0f
             verticalSpeed = 0f
@@ -2427,6 +2402,9 @@ data class Puff(
             )
         }
 
+        private fun isRiskyForRocket(index: Int): Boolean =
+            planets[index].targetAltitude > recommendedRange()
+
         private fun planetsScreen(
             c: Canvas
         ) {
@@ -2439,18 +2417,38 @@ data class Puff(
                 "Każdy świat wymaga poprzedniej kolonizacji.",
                 24f, 151f, 14f, false, Color.LTGRAY
             )
+            text(c, "ZBIORNIK: ${fuelCapacity().toInt()}%   ZASIĘG ZALECANY: ${recommendedRange().toInt()} km", 24f, 174f, 12f, true, Color.rgb(120,220,255))
+
+            button(
+                c,
+                if (fuelTankBonus >= 4) "ZBIORNIK MAX" else "+25% PALIWA  •  ${350 + fuelTankBonus * 250} CR",
+                width - 190f,
+                115f,
+                166f,
+                42f,
+                enabled = fuelTankBonus < 4 && credits >= 350 + fuelTankBonus * 250
+            ) { buyFuelPack() }
+
+            if (isRiskyDestination()) {
+                text(c, "⚠ RYZYKOWNY LOT — ten cel przekracza zalecany zasięg", 24f, height - 150f, 12f, true, Color.rgb(255,180,80))
+            }
 
             val cols = 2
             val cardW = (width - 54f) / 2f
             val cardH = 88f
+            val pageSize = 6
+            val pageCount = (planets.size + pageSize - 1) / pageSize
+            planetPage = planetPage.coerceIn(0, pageCount - 1)
+            val pageStart = planetPage * pageSize
+            val pageEnd = min(planets.size, pageStart + pageSize)
 
             planets.forEachIndexed { i, planet ->
-                val col = i % cols
-                val row = i / cols
+                if (i !in pageStart until pageEnd) return@forEachIndexed
+                val local = i - pageStart
+                val col = local % cols
+                val row = local / cols
                 val x = 18f + col * (cardW + 18f)
-                val y = 170f + row * 96f
-
-                if (y > height - 12f) return@forEachIndexed
+                val y = 195f + row * 96f
 
                 val unlocked = isPlanetUnlocked(i)
                 val landed = landedOn.contains(i)
@@ -2485,8 +2483,9 @@ data class Puff(
                     c,
                     when {
                         landed -> "KOLONIA ✓"
+                        unlocked && i == 1 && isRiskyForRocket(i) -> "RYZYKOWNA — DOKUP PALIWO"
                         unlocked -> "DOSTĘPNA"
-                        i == 1 -> "BAZA KSIĘŻYCOWA 4 LVL"
+                        i == 1 -> "POWRÓT NA KSIĘŻYC / START"
                         else -> "POPRZEDNI ŚWIAT"
                     },
                     x + 72f, y + 71f, 11f, true,
@@ -2505,6 +2504,40 @@ data class Puff(
                         }
                     )
                 }
+            }
+
+            button(
+                c,
+                "‹",
+                18f,
+                height - 118f,
+                70f,
+                44f,
+                enabled = planetPage > 0
+            ) {
+                planetPage = max(0, planetPage - 1)
+            }
+
+            text(
+                c,
+                "STRONA ${planetPage + 1} / $pageCount",
+                width / 2f - 55f,
+                height - 91f,
+                13f,
+                true,
+                Color.LTGRAY
+            )
+
+            button(
+                c,
+                "›",
+                width - 88f,
+                height - 118f,
+                70f,
+                44f,
+                enabled = planetPage < pageCount - 1
+            ) {
+                planetPage = min(pageCount - 1, planetPage + 1)
             }
 
             val selected = planets[selectedPlanet]
@@ -2876,7 +2909,15 @@ data class Puff(
                 8 -> "AKTYWNOŚĆ WULKANICZNA"
                 9 -> "KRYOGENICZNE BURZE"
                 10 -> "PIERŚCIENIE NECTARIS"
-                else -> "CZARNE BURZE OBSIDII"
+                11 -> "CZARNE BURZE OBSIDII"
+                12 -> "PROMIENIOWANIE SŁONECZNE"
+                13 -> "ATMOSFERA ZIEMSKA"
+                14 -> "BURZE BIOLOGICZNE"
+                15 -> "SUPERWULKANY"
+                16 -> "KRYszTAŁOWE WYŁADOWANIA"
+                17 -> "CIEMNA MATERIA"
+                18 -> "PAS METALI"
+                else -> "NIESTABILNA ORBITA"
             }
 
             /*
@@ -3416,7 +3457,7 @@ data class Puff(
              */
             val approach = prog.coerceIn(0f, 1f)
             val zoom = (approach * approach * (3f - 2f * approach))
-             approachPulse += 0.04f * (1.4f + approach * 2.2f)
+            approachPulse += 0.04f * (1.4f + approach * 2.2f)
 
             val planetY =
                 235f +
