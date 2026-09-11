@@ -3416,7 +3416,7 @@ data class Puff(
              */
             val approach = prog.coerceIn(0f, 1f)
             val zoom = (approach * approach * (3f - 2f * approach))
-            approachPulse += dt * (1.4f + approach * 2.2f)
+             approachPulse += 0.04f * (1.4f + approach * 2.2f)
 
             val planetY =
                 235f +
