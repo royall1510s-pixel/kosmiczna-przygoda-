@@ -155,6 +155,18 @@ data class Puff(
         private var tradeMessage = "Brak aktywnego kontraktu."
         private var tradeLevel = 0
         private var tradeCompleted = 0
+        // V28: flota i hangar.
+        private var cargoShips = 1
+        private var passengerShips = 0
+        private var colonizationShips = 0
+        private var fleetFuel = 100f
+        private var fleetLevel = 1
+        private var maintenanceDue = 0f
+        private var fleetRouteTarget = -1
+        private var fleetRouteTime = 0f
+        private var fleetRouteType = ""
+        private var fleetMessage = "Flota gotowa."
+
 
         private fun moonBaseLevel(): Int =
             habitatLevel + powerLevel + researchBaseLevel + storageLevel
@@ -406,6 +418,101 @@ data class Puff(
             return if (id != 0) id else fallback
         }
 
+        private fun prepareRocketBitmap(source: Bitmap): Bitmap {
+            if (source.width < 3 || source.height < 3) return source
+
+            val w = source.width
+            val h = source.height
+            val pixels = IntArray(w * h)
+            source.getPixels(pixels, 0, w, 0, 0, w, h)
+
+            val output = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val visited = BooleanArray(w * h)
+            val queue = IntArray(w * h)
+            var head = 0
+            var tail = 0
+
+            fun tryAdd(index: Int, reference: Int, tolerance: Int) {
+                if (index !in pixels.indices || visited[index]) return
+                val color = pixels[index]
+                val dr = Color.red(color) - Color.red(reference)
+                val dg = Color.green(color) - Color.green(reference)
+                val db = Color.blue(color) - Color.blue(reference)
+                if (dr * dr + dg * dg + db * db <= tolerance * tolerance) {
+                    visited[index] = true
+                    queue[tail++] = index
+                }
+            }
+
+            val refs = intArrayOf(
+                pixels[0],
+                pixels[w - 1],
+                pixels[(h - 1) * w],
+                pixels[w * h - 1]
+            )
+
+            for (x in 0 until w) {
+                tryAdd(x, refs[0], 85)
+                tryAdd((h - 1) * w + x, refs[2], 85)
+            }
+            for (y in 0 until h) {
+                tryAdd(y * w, refs[0], 85)
+                tryAdd(y * w + w - 1, refs[1], 85)
+            }
+
+            val dx = intArrayOf(1, -1, 0, 0)
+            val dy = intArrayOf(0, 0, 1, -1)
+
+            while (head < tail) {
+                val index = queue[head++]
+                val x = index % w
+                val y = index / w
+                pixels[index] = Color.TRANSPARENT
+                val reference = source.getPixel(x, y)
+
+                for (k in 0..3) {
+                    val nx = x + dx[k]
+                    val ny = y + dy[k]
+                    if (nx !in 0 until w || ny !in 0 until h) continue
+                    val ni = ny * w + nx
+                    if (visited[ni]) continue
+
+                    val color = pixels[ni]
+                    val dr = Color.red(color) - Color.red(reference)
+                    val dg = Color.green(color) - Color.green(reference)
+                    val db = Color.blue(color) - Color.blue(reference)
+
+                    if (dr * dr + dg * dg + db * db <= 70 * 70) {
+                        visited[ni] = true
+                        queue[tail++] = ni
+                    }
+                }
+            }
+
+            // Usuń pojedyncze gwiazdki/noise pozostałe na panelu.
+            val cleaned = pixels.copyOf()
+            for (y in 1 until h - 1) {
+                for (x in 1 until w - 1) {
+                    val i = y * w + x
+                    if (Color.alpha(cleaned[i]) == 0) continue
+
+                    var neighbors = 0
+                    for (yy in -1..1) {
+                        for (xx in -1..1) {
+                            if (xx == 0 && yy == 0) continue
+                            if (Color.alpha(cleaned[(y + yy) * w + (x + xx)]) > 0) {
+                                neighbors++
+                            }
+                        }
+                    }
+                    if (neighbors == 0) cleaned[i] = Color.TRANSPARENT
+                }
+            }
+
+            output.setPixels(cleaned, 0, w, 0, 0, w, h)
+            return output
+        }
+
         private fun rocketResId(level: Int): Int {
             val safeLevel = level.coerceIn(1, 20)
             val rocket = RocketDatabase.getRocket(safeLevel)
@@ -500,6 +607,16 @@ data class Puff(
                 .putString("tradeMessage", tradeMessage)
                 .putInt("tradeLevel", tradeLevel)
                 .putInt("tradeCompleted", tradeCompleted)
+                .putInt("cargoShips", cargoShips)
+                .putInt("passengerShips", passengerShips)
+                .putInt("colonizationShips", colonizationShips)
+                .putFloat("fleetFuel", fleetFuel)
+                .putInt("fleetLevel", fleetLevel)
+                .putFloat("maintenanceDue", maintenanceDue)
+                .putInt("fleetRouteTarget", fleetRouteTarget)
+                .putFloat("fleetRouteTime", fleetRouteTime)
+                .putString("fleetRouteType", fleetRouteType)
+                .putString("fleetMessage", fleetMessage)
                 .putInt("fuelTankBonus", fuelTankBonus)
                 .putStringSet(
                     "landedOn",
@@ -575,7 +692,17 @@ data class Puff(
             cargoReward = prefs.getInt("cargoReward", 0).coerceAtLeast(0)
             tradeMessage = prefs.getString("tradeMessage", "Brak aktywnego kontraktu.") ?: "Brak aktywnego kontraktu."
             tradeLevel = prefs.getInt("tradeLevel", 0).coerceAtLeast(0)
-            tradeCompleted = prefs.getInt("tradeCompleted", 0).coerceAtLeast(0)
+            tradeCompleted = prefs.getInt("tradeCompleted", 0)
+            cargoShips = prefs.getInt("cargoShips", 1).coerceAtLeast(1)
+            passengerShips = prefs.getInt("passengerShips", 0).coerceAtLeast(0)
+            colonizationShips = prefs.getInt("colonizationShips", 0).coerceAtLeast(0)
+            fleetFuel = prefs.getFloat("fleetFuel", 100f).coerceAtLeast(0f)
+            fleetLevel = prefs.getInt("fleetLevel", 1).coerceAtLeast(1)
+            maintenanceDue = prefs.getFloat("maintenanceDue", 0f).coerceIn(0f, 100f)
+            fleetRouteTarget = prefs.getInt("fleetRouteTarget", -1).coerceIn(-1, planets.size - 1)
+            fleetRouteTime = prefs.getFloat("fleetRouteTime", 0f).coerceAtLeast(0f)
+            fleetRouteType = prefs.getString("fleetRouteType", "") ?: ""
+            fleetMessage = prefs.getString("fleetMessage", "Flota gotowa.") ?: "Flota gotowa.".coerceAtLeast(0)
 
             prefs.getStringSet(
                 "landedOn",
@@ -622,7 +749,7 @@ data class Puff(
                 BitmapFactory.decodeResource(
                     resources,
                     rocketResId(rocketLevel)
-                )
+                )?.let { prepareRocketBitmap(it) }
 
             asteroidBmp =
                 BitmapFactory.decodeResource(
@@ -768,6 +895,7 @@ data class Puff(
             updateColonyProduction(dt)
             updateTransport(dt)
             updateCargoTransport(dt)
+            updateFleet(dt)
 
             hitRegions.clear()
 
@@ -786,6 +914,7 @@ data class Puff(
                 "resources" -> resources(c)
                 "industry" -> industry(c)
                 "network" -> network(c)
+                "fleet" -> fleet(c)
                 "trade" -> trade(c)
                 "game" -> game(c)
             }
@@ -2770,6 +2899,284 @@ data class Puff(
             }
         }
 
+
+        private fun fleetFuelCapacity(): Float =
+            100f + (fleetLevel - 1) * 35f
+
+        private fun fleetCargoCapacity(): Int =
+            cargoShips * (80 + fleetLevel * 20)
+
+        private fun fleetPassengerCapacity(): Int =
+            passengerShips * (6 + fleetLevel * 2)
+
+        private fun fleetColonistCapacity(): Int =
+            colonizationShips * (8 + fleetLevel * 2)
+
+        private fun fleetMaintenanceCost(): Int =
+            900 + fleetLevel * 450 +
+                    (cargoShips + passengerShips + colonizationShips) * 250
+
+        private fun buyFleetShip(type: String) {
+            val cost = when (type) {
+                "CARGO" -> 18000 + fleetLevel * 6500
+                "PASAŻER" -> 26000 + fleetLevel * 8000
+                else -> 42000 + fleetLevel * 12000
+            }
+
+            if (credits < cost) {
+                fleetMessage = "Brakuje $cost CR."
+                return
+            }
+
+            credits -= cost
+            when (type) {
+                "CARGO" -> cargoShips++
+                "PASAŻER" -> passengerShips++
+                "KOLONIZACJA" -> colonizationShips++
+            }
+            fleetMessage = "Zakupiono statek: $type."
+            saveState()
+        }
+
+        private fun upgradeFleet() {
+            val cost = 30000 + fleetLevel * 18000
+            if (credits < cost) {
+                fleetMessage = "Rozbudowa kosztuje $cost CR."
+                return
+            }
+
+            credits -= cost
+            fleetLevel++
+            fleetFuel = fleetFuelCapacity()
+            fleetMessage = "Flota osiągnęła poziom $fleetLevel."
+            saveState()
+        }
+
+        private fun refuelFleet() {
+            val need = fleetFuelCapacity() - fleetFuel
+            if (need <= 1f) {
+                fleetMessage = "Zbiorniki są pełne."
+                return
+            }
+
+            val cost = (need * 35f).toInt()
+            if (credits < cost) {
+                fleetMessage = "Tankowanie kosztuje $cost CR."
+                return
+            }
+
+            credits -= cost
+            fleetFuel = fleetFuelCapacity()
+            fleetMessage = "Flota zatankowana."
+            saveState()
+        }
+
+        private fun maintainFleet() {
+            val cost = fleetMaintenanceCost()
+            if (credits < cost) {
+                fleetMessage = "Konserwacja kosztuje $cost CR."
+                return
+            }
+
+            credits -= cost
+            maintenanceDue = 0f
+            fleetMessage = "Konserwacja zakończona."
+            saveState()
+        }
+
+        private fun fleetFuelCost(target: Int): Float {
+            val altitudeTarget =
+                planets[target].targetAltitude
+            return (16f + altitudeTarget / 75f) /
+                    (1f + (fleetLevel - 1) * 0.12f)
+        }
+
+        private fun fleetStartRoute(type: String) {
+            if (fleetRouteTarget >= 0) {
+                fleetMessage = "Flota jest już w trasie."
+                return
+            }
+
+            val target = selectedPlanet.coerceIn(0, planets.lastIndex)
+            if (!isPlanetUnlocked(target) || target == 0) {
+                fleetMessage = "Najpierw odblokuj ten świat."
+                return
+            }
+
+            if (maintenanceDue >= 90f) {
+                fleetMessage = "Najpierw wykonaj konserwację."
+                return
+            }
+
+            when (type) {
+                "CARGO" -> if (cargoShips < 1) {
+                    fleetMessage = "Brak statku cargo."
+                    return
+                }
+                "PASAŻER" -> if (passengerShips < 1) {
+                    fleetMessage = "Brak statku pasażerskiego."
+                    return
+                }
+                "KOLONIZACJA" -> if (colonizationShips < 1) {
+                    fleetMessage = "Brak statku kolonizacyjnego."
+                    return
+                }
+            }
+
+            val fuelCost = fleetFuelCost(target)
+            if (fleetFuel < fuelCost) {
+                fleetMessage = "Za mało paliwa floty."
+                return
+            }
+
+            fleetFuel -= fuelCost
+            fleetRouteTarget = target
+            fleetRouteType = type
+            fleetRouteTime =
+                10f + planets[target].targetAltitude / 800f
+            fleetMessage =
+                "MISJA $type → ${planets[target].name}"
+            saveState()
+        }
+
+        private fun updateFleet(dt: Float) {
+            maintenanceDue =
+                (maintenanceDue + dt * 0.08f).coerceAtMost(100f)
+
+            if (fleetRouteTarget < 0) return
+
+            fleetRouteTime -= dt
+            if (fleetRouteTime > 0f) return
+
+            val target = fleetRouteTarget
+            val worldName = planets[target].name
+
+            when (fleetRouteType) {
+                "CARGO" -> {
+                    val reward =
+                        2500 + target * 650 + tradeLevel * 300
+                    credits += reward
+                    tradeCompleted++
+                    fleetMessage =
+                        "Cargo dotarło na $worldName. +$reward CR"
+                }
+
+                "PASAŻER" -> {
+                    val arriving = 2 + fleetLevel
+                    colonyPopulation += arriving
+                    fleetMessage =
+                        "Transport dotarł. Kolonia +$arriving osób."
+                }
+
+                "KOLONIZACJA" -> {
+                    val arriving = 4 + fleetLevel
+                    outpostLevels[target] =
+                        maxOf(1, outpostLevels[target])
+                    outpostPopulation[target] += arriving
+                    fleetMessage =
+                        "Placówka założona na $worldName. +$arriving kolonistów."
+                }
+            }
+
+            fleetRouteTarget = -1
+            fleetRouteTime = 0f
+            fleetRouteType = ""
+            saveState()
+        }
+
+        private fun fleet(c: Canvas) {
+            backButton(c, "HANGAR / FLOTA")
+            creditsBadge(c)
+
+            text(c, "POZIOM FLOTY: $fleetLevel", 28f, 145f, 24f, true)
+            text(
+                c,
+                "PALIWO: ${fleetFuel.toInt()} / ${fleetFuelCapacity().toInt()}",
+                28f, 177f, 19f, false,
+                Color.rgb(120, 225, 255)
+            )
+            text(
+                c,
+                "KONSERWACJA: ${maintenanceDue.toInt()}%",
+                28f, 206f, 18f, true,
+                if (maintenanceDue >= 70f)
+                    Color.rgb(255, 130, 100)
+                else
+                    Color.rgb(130, 245, 165)
+            )
+
+            text(c, "CARGO: $cargoShips • ${fleetCargoCapacity()} u", 28f, 252f, 18f)
+            text(
+                c,
+                "PASAŻERSKIE: $passengerShips • ${fleetPassengerCapacity()} miejsc",
+                28f, 282f, 18f
+            )
+            text(
+                c,
+                "KOLONIZACYJNE: $colonizationShips • ${fleetColonistCapacity()} miejsc",
+                28f, 312f, 18f
+            )
+
+            if (fleetRouteTarget >= 0) {
+                text(
+                    c,
+                    "TRASA: $fleetRouteType → ${planets[fleetRouteTarget].name}",
+                    28f, 352f, 18f, true,
+                    Color.rgb(255, 220, 120)
+                )
+                text(
+                    c,
+                    "POZOSTAŁO: ${fleetRouteTime.toInt()} s",
+                    28f, 379f, 17f, false,
+                    Color.rgb(255, 220, 120)
+                )
+            } else {
+                text(
+                    c,
+                    "Wybierz planetę w PLANETY, potem uruchom MISJĘ.",
+                    28f, 355f, 16f, false, Color.LTGRAY
+                )
+            }
+
+            text(
+                c,
+                fleetMessage,
+                28f,
+                height.toFloat() - 245f,
+                16f,
+                false,
+                Color.rgb(215, 225, 235)
+            )
+
+            button(c, "KUP CARGO", 28f, height.toFloat() - 205f, width / 2f - 38f, 48f) {
+                buyFleetShip("CARGO")
+            }
+            button(c, "KUP PASAŻERSKI", width / 2f + 10f, height.toFloat() - 205f, width / 2f - 38f, 48f) {
+                buyFleetShip("PASAŻER")
+            }
+            button(c, "KUP KOLONIZACYJNY", 28f, height.toFloat() - 148f, width / 2f - 38f, 48f) {
+                buyFleetShip("KOLONIZACJA")
+            }
+            button(c, "ROZBUDUJ", width / 2f + 10f, height.toFloat() - 148f, width / 2f - 38f, 48f) {
+                upgradeFleet()
+            }
+            button(c, "TANKUJ", 28f, height.toFloat() - 91f, width / 3f - 18f, 48f) {
+                refuelFleet()
+            }
+            button(c, "KONSERWACJA", width / 3f + 4f, height.toFloat() - 91f, width / 3f - 18f, 48f) {
+                maintainFleet()
+            }
+            button(c, "MISJA", 2f * width / 3f + 8f, height.toFloat() - 91f, width / 3f - 18f, 48f) {
+                fleetStartRoute(
+                    when {
+                        colonizationShips > 0 -> "KOLONIZACJA"
+                        passengerShips > 0 -> "PASAŻER"
+                        else -> "CARGO"
+                    }
+                )
+            }
+        }
+
         private fun trade(c: Canvas) {
             backButton(c, "HANDEL")
             creditsBadge(c)
@@ -3000,6 +3407,18 @@ data class Puff(
                 selectedCrew = 0
                 startFlight()
             }
+
+            button(
+                c,
+                "HANGAR / FLOTA",
+                width - 210f,
+                702f,
+                180f,
+                52f
+            ) {
+                screen = "fleet"
+            }
+
         }
 
         private fun rockets(
@@ -3387,7 +3806,7 @@ data class Puff(
                                 rocketResId(
                                     rocketLevel
                                 )
-                            )
+                            )?.let { prepareRocketBitmap(it) }
 
                         saveState()
                     }
