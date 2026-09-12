@@ -702,7 +702,7 @@ data class Puff(
             fleetRouteTarget = prefs.getInt("fleetRouteTarget", -1).coerceIn(-1, planets.size - 1)
             fleetRouteTime = prefs.getFloat("fleetRouteTime", 0f).coerceAtLeast(0f)
             fleetRouteType = prefs.getString("fleetRouteType", "") ?: ""
-            fleetMessage = prefs.getString("fleetMessage", "Flota gotowa.") ?: "Flota gotowa.".coerceAtLeast(0)
+            fleetMessage = prefs.getString("fleetMessage", "Flota gotowa.") ?: "Flota gotowa."
 
             prefs.getStringSet(
                 "landedOn",
